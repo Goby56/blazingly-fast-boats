@@ -1,0 +1,54 @@
+{
+	"schemaVersion": 1,
+	"id": "blazingly-fast-boats",
+	"version": "${version}",
+	"name": "Blazingly Fast Boats",
+	"description": "This is an example description! Tell everyone what your mod is about!",
+	"authors": [
+		"Me!"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/blazingly-fast-boats/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			{
+				"value": "com.goby56.blazinglyfastboats.ExampleMod",
+				"adapter": "kotlin"
+			}
+		],
+		"client": [
+			{
+				"value": "com.goby56.blazinglyfastboats.ExampleModClient",
+				"adapter": "kotlin"
+			}
+		],
+		"fabric-datagen": [
+			{
+				"value": "com.goby56.blazinglyfastboats.ExampleModDataGenerator",
+				"adapter": "kotlin"
+			}
+		]
+	},
+	"mixins": [
+		"blazingly-fast-boats.mixins.json",
+		{
+			"config": "blazingly-fast-boats.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.14.21",
+		"minecraft": "~1.20.1",
+		"java": ">=17",
+		"fabric-api": "*",
+		"fabric-language-kotlin": ">=1.8.22"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}
