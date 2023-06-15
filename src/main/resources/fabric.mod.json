@@ -3,33 +3,33 @@
 	"id": "blazingly-fast-boats",
 	"version": "${version}",
 	"name": "Blazingly Fast Boats",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"description": "Makes boats usable across vast oceans with furnace powered motor boats",
 	"authors": [
-		"Me!"
+		"Goby56"
 	],
 	"contact": {
 		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
+		"sources": "https://github.com/Goby56/blazingly-fast-boats"
 	},
-	"license": "CC0-1.0",
+	"license": "GNU General Public License V3",
 	"icon": "assets/blazingly-fast-boats/icon.png",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
 			{
-				"value": "com.goby56.blazinglyfastboats.ExampleMod",
+				"value": "com.goby56.blazinglyfastboats.BlazinglyFastBoats",
 				"adapter": "kotlin"
 			}
 		],
 		"client": [
 			{
-				"value": "com.goby56.blazinglyfastboats.ExampleModClient",
+				"value": "com.goby56.blazinglyfastboats.BlazinglyFastBoatsClient",
 				"adapter": "kotlin"
 			}
 		],
 		"fabric-datagen": [
 			{
-				"value": "com.goby56.blazinglyfastboats.ExampleModDataGenerator",
+				"value": "com.goby56.blazinglyfastboats.BlazinglyFastBoatsDataGenerator",
 				"adapter": "kotlin"
 			}
 		]
