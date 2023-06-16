@@ -2,22 +2,19 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "B": {
-      "item": "minecraft:acacia_boat"
-    },
     "F": {
       "item": "minecraft:furnace"
     },
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
     "P": {
       "item": "minecraft:piston"
-    },
-    "R": {
-      "item": "minecraft:redstone"
     }
   },
   "pattern": [
-    "RF",
-    "PB"
+    "IFI",
+    "PII"
   ],
   "result": {
     "item": "blazingly-fast-boats:motorboat"

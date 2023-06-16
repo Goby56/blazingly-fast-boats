@@ -19,13 +19,13 @@ public class ModRecipeGenerator extends FabricRecipeProvider {
     @Override
     public void generate(Consumer<RecipeJsonProvider> exporter) {
         ShapedRecipeJsonBuilder.create(RecipeCategory.TRANSPORTATION, ModItems.MOTORBOAT)
-                .pattern("RF")
-                .pattern("PB")
-                .input('R', Items.REDSTONE)
+                .pattern("IFI")
+                .pattern("PII")
+                .input('I', Items.IRON_INGOT)
                 .input('F', Items.FURNACE)
                 .input('P', Items.PISTON)
-                .input('B', Items.ACACIA_BOAT)
                 .criterion(FabricRecipeProvider.hasItem(Items.PISTON), FabricRecipeProvider.conditionsFromItem(Items.PISTON))
+                .criterion(FabricRecipeProvider.hasItem(Items.BLAST_FURNACE), FabricRecipeProvider.conditionsFromItem(Items.BLAST_FURNACE))
                 .offerTo(exporter, new Identifier(FabricRecipeProvider.getRecipeName(ModItems.MOTORBOAT)));
     }
 

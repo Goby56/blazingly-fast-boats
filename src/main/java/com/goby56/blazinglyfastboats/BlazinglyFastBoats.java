@@ -1,5 +1,6 @@
 package com.goby56.blazinglyfastboats;
 
+import com.goby56.blazinglyfastboats.entity.ModEntities;
 import com.goby56.blazinglyfastboats.item.ModItems;
 import net.fabricmc.api.ModInitializer;
 
@@ -13,5 +14,6 @@ public class BlazinglyFastBoats implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		ModItems.register();
+		ModEntities.register();
 	}
 }
