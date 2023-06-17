@@ -8,6 +8,8 @@ import net.minecraft.item.Item;
 import net.minecraft.world.World;
 
 public class MotorboatEntity extends BoatEntity {
+    public Float prevYaw;
+
     public MotorboatEntity(EntityType<? extends BoatEntity> entityType, World world) {
         super(entityType, world);
     }
@@ -18,6 +20,13 @@ public class MotorboatEntity extends BoatEntity {
         this.prevX = x;
         this.prevY = y;
         this.prevZ = z;
+        this.prevYaw = this.getYaw();
+    }
+
+    @Override
+    public void tick() {
+        this.prevYaw = this.getYaw();
+        super.tick();
     }
 
     @Override

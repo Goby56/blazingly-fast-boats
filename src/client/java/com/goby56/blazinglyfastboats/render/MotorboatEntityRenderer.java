@@ -4,6 +4,8 @@ import com.goby56.blazinglyfastboats.BlazinglyFastBoats;
 import com.goby56.blazinglyfastboats.BlazinglyFastBoatsClient;
 import com.goby56.blazinglyfastboats.entity.custom.MotorboatEntity;
 import com.goby56.blazinglyfastboats.model.MotorboatEntityModel;
+import com.goby56.blazinglyfastboats.utils.EasingFunctions;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
@@ -14,14 +16,18 @@ import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.model.CompositeEntityModel;
 import net.minecraft.client.render.entity.model.ModelWithWaterPatch;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Pair;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.RotationAxis;
+import net.minecraft.util.math.*;
 import org.joml.Quaternionf;
 
 public class MotorboatEntityRenderer extends EntityRenderer<MotorboatEntity> {
     private final Pair<Identifier, CompositeEntityModel<MotorboatEntity>> textureAndModel;
+
+    private final float planingHeight = 0.25f;
+    private final float hullMaxPitch = 20f; // degrees
+    private final float hullMaxRoll = 5f; // degrees
 
     public MotorboatEntityRenderer(EntityRendererFactory.Context ctx) {
         super(ctx);
@@ -39,6 +45,16 @@ public class MotorboatEntityRenderer extends EntityRenderer<MotorboatEntity> {
         matrices.push();
         matrices.translate(0.0F, 0.375F, 0.0F);
         matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(90.0F - yaw)); // Was 180.0F before, had to change
+
+        double yawDelta = Math.abs(yaw - entity.prevYaw);
+        int yawSign = yaw - entity.prevYaw > 0 ? 1 : -1;
+        double velocity = entity.getVelocity().horizontalLengthSquared();
+        if (velocity > 1e-4 && entity.hasControllingPassenger()) {
+            MinecraftClient.getInstance().inGameHud.getChatHud().addMessage(Text.of(String.valueOf(velocity)));
+            matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees((float) (-this.hullMaxPitch * EasingFunctions.upsideDownParabola(velocity / 0.156f))));
+            matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees((float) (yawSign * this.hullMaxRoll * EasingFunctions.easeOutQuad(yawDelta))));
+            matrices.translate(0, 0.5 * EasingFunctions.easeOutBack(velocity / 0.156f), 0);
+        }
 
         float h = (float)entity.getDamageWobbleTicks() - tickDelta;
         float j = entity.getDamageWobbleStrength() - tickDelta;
