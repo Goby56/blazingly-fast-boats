@@ -10,7 +10,7 @@ import net.minecraft.client.render.entity.model.EntityModelLayer;
 import net.minecraft.util.Identifier;
 
 public class BlazinglyFastBoatsClient implements ClientModInitializer {
-	public static final EntityModelLayer MOTORBOAT_LAYER = new EntityModelLayer(new Identifier(BlazinglyFastBoats.MOD_ID, "motorboat_entity"), "main");
+	public static final EntityModelLayer MOTORBOAT = new EntityModelLayer(new Identifier(BlazinglyFastBoats.MOD_ID, "motorboat_entity"), "main");
 
 	@Override
 	public void onInitializeClient() {
@@ -18,7 +18,7 @@ public class BlazinglyFastBoatsClient implements ClientModInitializer {
 		BlazinglyFastBoats.LOGGER.info("Registering client specific stuff for " + BlazinglyFastBoats.MOD_ID);
 		EntityRendererRegistry.register(ModEntities.MOTORBOAT, MotorboatEntityRenderer::new);
 
-		EntityModelLayerRegistry.registerModelLayer(MOTORBOAT_LAYER, MotorboatEntityModel::getTexturedModelData);
+		EntityModelLayerRegistry.registerModelLayer(MOTORBOAT, MotorboatEntityModel::getTexturedModelData);
 
 	}
 }
