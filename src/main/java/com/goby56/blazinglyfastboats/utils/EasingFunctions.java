@@ -11,10 +11,21 @@ public class EasingFunctions {
     }
 
     public static double upsideDownParabola(double x) {
-        return -4 * Math.pow(x, 2) + 4 * x;
+        return -4 * x * (x - 1);
     }
 
+    public static double easeOutElastic(double x) {
+        // https://easings.net/#easeOutElastic
+
+        double c4 = (2 * Math.PI) / 3;
+
+        return x == 0 ? 0 : x == 1 ? 1 : Math.pow(2, -10 * x) * Math.sin((x * 10 - 0.75) * c4) + 1;
+    }
+
+
     public static double easeOutQuad(double x) {
+        // https://easings.net/#easeOutQuad
+
         return 1 - (1 - x) * (1 - x);
     }
 }

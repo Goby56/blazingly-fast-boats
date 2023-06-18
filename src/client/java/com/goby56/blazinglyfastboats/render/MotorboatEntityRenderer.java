@@ -26,8 +26,12 @@ public class MotorboatEntityRenderer extends EntityRenderer<MotorboatEntity> {
     private final Pair<Identifier, CompositeEntityModel<MotorboatEntity>> textureAndModel;
 
     private final float planingHeight = 0.25f;
-    private final float hullMaxPitch = 20f; // degrees
-    private final float hullMaxRoll = 5f; // degrees
+    private final float maxHullPitch = 20f; // degrees
+    private final float maxHullRoll = 10f; // degrees
+    private final float rollStrength = 20f;
+    private final float hullRollDecay = 0.9f;
+    private final float maxYawOnTurn = 180f; // degrees, the amount of turn that produces the maximum amount of hull roll
+    private final float maxVelocity = 0.4f;
 
     public MotorboatEntityRenderer(EntityRendererFactory.Context ctx) {
         super(ctx);
@@ -46,15 +50,29 @@ public class MotorboatEntityRenderer extends EntityRenderer<MotorboatEntity> {
         matrices.translate(0.0F, 0.375F, 0.0F);
         matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(90.0F - yaw)); // Was 180.0F before, had to change
 
-        double yawDelta = Math.abs(yaw - entity.prevYaw);
-        int yawSign = yaw - entity.prevYaw > 0 ? 1 : -1;
-        double velocity = entity.getVelocity().horizontalLengthSquared();
-        if (velocity > 1e-4 && entity.hasControllingPassenger()) {
-            MinecraftClient.getInstance().inGameHud.getChatHud().addMessage(Text.of(String.valueOf(velocity)));
-            matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees((float) (-this.hullMaxPitch * EasingFunctions.upsideDownParabola(velocity / 0.156f))));
-            matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees((float) (yawSign * this.hullMaxRoll * EasingFunctions.easeOutQuad(yawDelta))));
-            matrices.translate(0, 0.5 * EasingFunctions.easeOutBack(velocity / 0.156f), 0);
+        double velocityDot = entity.getVelocity().normalize().dotProduct(Vec3d.fromPolar(0, yaw));
+        double velocityFactor = entity.getVelocity().horizontalLength() / maxVelocity;
+        if (velocityFactor > 1e-4 && entity.hasControllingPassenger()) {
+//            MinecraftClient.getInstance().inGameHud.getChatHud().addMessage(Text.of(String.valueOf(entity.getVelocity().horizontalLength())));
+            matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees((float) (-this.maxHullPitch * EasingFunctions.upsideDownParabola(velocityFactor))));
+
+//            if (entity.pressingLeft ^ entity.pressingRight) {
+//                int rollDirection = entity.pressingLeft ? 1 : -1;
+//                entity.roll += rollDirection * rollStrength * EasingFunctions.upsideDownParabola(velocityFactor) * tickDelta;
+//            }
+//            entity.roll *= hullRollDecay;
+//            if (entity.roll > maxHullRoll) {
+//                entity.roll = maxHullRoll;
+//            }
+            MinecraftClient.getInstance().inGameHud.getChatHud().addMessage(Text.of(String.valueOf(1 - velocityDot)));
+            int rollDirection = entity.pressingLeft ? 1 : entity.pressingRight ? -1 : 0;
+            float roll = (float) (rollDirection * EasingFunctions.easeOutElastic(1 - velocityDot) * rollStrength * EasingFunctions.upsideDownParabola(velocityFactor));
+            matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(Math.min(roll, maxHullRoll)));
+
+            matrices.translate(0, planingHeight * EasingFunctions.easeOutBack(velocityFactor), 0);
         }
+
+        entity.updateLastPlayerInput();
 
         float h = (float)entity.getDamageWobbleTicks() - tickDelta;
         float j = entity.getDamageWobbleStrength() - tickDelta;
