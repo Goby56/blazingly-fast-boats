@@ -2,13 +2,23 @@ package com.goby56.blazinglyfastboats.entity.custom;
 
 import com.goby56.blazinglyfastboats.entity.ModEntities;
 import com.goby56.blazinglyfastboats.item.ModItems;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.vehicle.BoatEntity;
 import net.minecraft.item.Item;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
 public class MotorboatEntity extends BoatEntity {
     public LastPlayerInput lastPlayerInput = LastPlayerInput.NONE;
+
+    public static final float MAX_FORWARD_SPEED = 1.2f;
+    public static final float MAX_BACKING_SPEED = 0.3f;
+    public static final float VELOCITY_DECAY = 0.96f; // 0.9 regular boat
+
+    public float roll = 0;
 
     public MotorboatEntity(EntityType<? extends BoatEntity> entityType, World world) {
         super(entityType, world);
@@ -36,10 +46,86 @@ public class MotorboatEntity extends BoatEntity {
         }
     }
 
+    private double getVelocityDecay() {
+        double dot = this.getVelocity().dotProduct(Vec3d.fromPolar(0, this.getYaw()));
+        float maxVelocity = dot > 0 ? MAX_FORWARD_SPEED : MAX_BACKING_SPEED;
+        double x = this.getVelocity().horizontalLength() / maxVelocity;
+        return x * x - 0.5 * x + 0.5 - (1 - VELOCITY_DECAY);
+    }
+
+    private void handleInput() {
+
+        if (!this.hasPassengers()) {
+            return;
+        }
+        double acceleration = 0f;
+
+        if (this.pressingLeft) {
+            this.yawVelocity -= 1f;
+
+        }
+        if (this.pressingRight) {
+            this.yawVelocity += 1f;
+        }
+        this.setYaw(this.getYaw() + this.yawVelocity);
+//        if (this.pressingRight != this.pressingLeft && !this.pressingForward && !this.pressingBack) {
+//        }
+        Vec3d velocity = Vec3d.fromPolar(0, this.getYaw());
+        if (this.pressingForward) {
+            acceleration += MAX_FORWARD_SPEED * (1 - VELOCITY_DECAY);
+        }
+        if (this.pressingBack) {
+            acceleration -= MAX_BACKING_SPEED * (1 - VELOCITY_DECAY);
+        }
+        Vec3d accelerationVec = Vec3d.fromPolar(0, this.getYaw()).multiply(acceleration);
+        this.setVelocity(this.getVelocity().add(accelerationVec));
+//        this.setVelocity(this.getVelocity().add(MathHelper.sin(-this.getYaw() * ((float)Math.PI / 180)) * acceleration, 0.0, MathHelper.cos(this.getYaw() * ((float)Math.PI / 180)) * acceleration));
+    }
+
     @Override
-    public void tick() {
-        this.prevYaw = this.getYaw();
-        super.tick();
+    protected void updatePaddles() {
+        this.handleInput();
+    }
+
+    @Override
+    protected void updateVelocity() {
+        double d = -0.04f;
+        double e = this.hasNoGravity() ? 0.0 : (double)-0.04f;
+        double f = 0.0;
+        this.velocityDecay = 0.05f;
+        if (this.lastLocation == Location.IN_AIR && this.location != Location.IN_AIR && this.location != Location.ON_LAND) {
+            this.waterLevel = this.getBodyY(1.0);
+            this.setPosition(this.getX(), (double)(this.getWaterHeightBelow() - this.getHeight()) + 0.101, this.getZ());
+            this.setVelocity(this.getVelocity().multiply(1.0, 0.0, 1.0));
+            this.fallVelocity = 0.0;
+            this.location = Location.IN_WATER;
+        } else {
+            if (this.location == Location.IN_WATER) {
+                // implement the ability to go in lava (new Location value)
+                // lava should be a little bit slower
+                // TODO make water somewhat slippery
+                f = (this.waterLevel - this.getY()) / (double)this.getHeight();
+                this.velocityDecay = VELOCITY_DECAY;
+            } else if (this.location == Location.UNDER_FLOWING_WATER) {
+                e = -7.0E-4;
+                this.velocityDecay = 0.9f;
+            } else if (this.location == Location.UNDER_WATER) {
+                f = 0.01f;
+                this.velocityDecay = 0.45f;
+            } else if (this.location == Location.IN_AIR) {
+                this.velocityDecay = 0.9f;
+            } else if (this.location == Location.ON_LAND) {
+                this.velocityDecay = 0.1f;
+                // maybe spawn particles of block on top of
+            }
+            Vec3d vec3d = this.getVelocity();
+            this.setVelocity(vec3d.x * (double)this.velocityDecay, vec3d.y + e, vec3d.z * (double)this.velocityDecay);
+            this.yawVelocity *= this.velocityDecay;
+            if (f > 0.0) {
+                Vec3d vec3d2 = this.getVelocity();
+                this.setVelocity(vec3d2.x, (vec3d2.y + f * 0.06153846016296973) * 0.75, vec3d2.z);
+            }
+        }
     }
 
     @Override

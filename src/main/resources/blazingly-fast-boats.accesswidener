@@ -6,3 +6,15 @@ accessible field net/minecraft/entity/vehicle/BoatEntity pressingForward Z
 accessible field net/minecraft/entity/vehicle/BoatEntity pressingBack Z
 accessible field net/minecraft/entity/vehicle/BoatEntity pressingLeft Z
 accessible field net/minecraft/entity/vehicle/BoatEntity pressingRight Z
+
+accessible field net/minecraft/entity/vehicle/BoatEntity velocityDecay F
+accessible field net/minecraft/entity/vehicle/BoatEntity lastLocation Lnet/minecraft/entity/vehicle/BoatEntity$Location;
+accessible field net/minecraft/entity/vehicle/BoatEntity waterLevel D
+accessible field net/minecraft/entity/vehicle/BoatEntity fallVelocity D
+accessible field net/minecraft/entity/vehicle/BoatEntity location Lnet/minecraft/entity/vehicle/BoatEntity$Location;
+accessible field net/minecraft/entity/vehicle/BoatEntity nearbySlipperiness F
+accessible field net/minecraft/entity/vehicle/BoatEntity yawVelocity F
+
+extendable method net/minecraft/entity/vehicle/BoatEntity updatePaddles ()V
+extendable method net/minecraft/entity/vehicle/BoatEntity updateVelocity ()V
+

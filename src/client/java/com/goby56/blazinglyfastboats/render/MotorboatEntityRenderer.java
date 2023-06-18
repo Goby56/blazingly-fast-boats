@@ -4,15 +4,16 @@ import com.goby56.blazinglyfastboats.BlazinglyFastBoats;
 import com.goby56.blazinglyfastboats.BlazinglyFastBoatsClient;
 import com.goby56.blazinglyfastboats.entity.custom.MotorboatEntity;
 import com.goby56.blazinglyfastboats.model.MotorboatEntityModel;
+import com.goby56.blazinglyfastboats.render.debug.MotorboatDebugRenderer;
 import com.goby56.blazinglyfastboats.utils.EasingFunctions;
+import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.*;
+import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.EntityRenderer;
 import net.minecraft.client.render.entity.EntityRendererFactory;
+import net.minecraft.client.render.entity.EntityRenderers;
 import net.minecraft.client.render.entity.model.CompositeEntityModel;
 import net.minecraft.client.render.entity.model.ModelWithWaterPatch;
 import net.minecraft.client.util.math.MatrixStack;
@@ -20,23 +21,29 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Pair;
 import net.minecraft.util.math.*;
+import org.joml.Matrix3f;
+import org.joml.Matrix4f;
 import org.joml.Quaternionf;
+
+import java.text.DecimalFormat;
+
+import static net.minecraft.client.render.VertexFormat.DrawMode.DEBUG_LINES;
 
 public class MotorboatEntityRenderer extends EntityRenderer<MotorboatEntity> {
     private final Pair<Identifier, CompositeEntityModel<MotorboatEntity>> textureAndModel;
+    protected final EntityRenderDispatcher entityRenderDispatcher;
 
-    private final float planingHeight = 0.25f;
-    private final float maxHullPitch = 20f; // degrees
-    private final float maxHullRoll = 10f; // degrees
-    private final float rollStrength = 20f;
-    private final float hullRollDecay = 0.9f;
-    private final float maxYawOnTurn = 180f; // degrees, the amount of turn that produces the maximum amount of hull roll
-    private final float maxVelocity = 0.4f;
+    public static final float planingHeight = 0.25f;
+    public static final float maxHullPitch = 20f; // degrees
+    public static final float maxHullRoll = 10f; // degrees
+    public static final float rollStrength = 20f;
+    public static final float hullRollDecay = 0.9f;
 
     public MotorboatEntityRenderer(EntityRendererFactory.Context ctx) {
         super(ctx);
         this.shadowRadius = 0.8F;
         this.textureAndModel = new Pair<>(new Identifier(BlazinglyFastBoats.MOD_ID, "textures/entity/motorboat.png"), this.createModel(ctx));
+        this.entityRenderDispatcher = ctx.getRenderDispatcher();
     }
 
     private CompositeEntityModel<MotorboatEntity> createModel(EntityRendererFactory.Context ctx) {
@@ -46,28 +53,30 @@ public class MotorboatEntityRenderer extends EntityRenderer<MotorboatEntity> {
 
     @Override
     public void render(MotorboatEntity entity, float yaw, float tickDelta, MatrixStack matrices, VertexConsumerProvider vertexConsumerProvider, int light) {
+        MotorboatDebugRenderer.renderVelocityVector(entity, vertexConsumerProvider.getBuffer(RenderLayer.getLines()), matrices);
+//        MotorboatDebugRenderer.renderAccelerationVector(entity, vertexConsumerProvider.getBuffer(RenderLayer.getLines()), matrices);
+
         matrices.push();
         matrices.translate(0.0F, 0.375F, 0.0F);
         matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(90.0F - yaw)); // Was 180.0F before, had to change
 
         double velocityDot = entity.getVelocity().normalize().dotProduct(Vec3d.fromPolar(0, yaw));
-        double velocityFactor = entity.getVelocity().horizontalLength() / maxVelocity;
+        double velocityFactor = entity.getVelocity().horizontalLength() / MotorboatEntity.MAX_FORWARD_SPEED;
         if (velocityFactor > 1e-4 && entity.hasControllingPassenger()) {
-//            MinecraftClient.getInstance().inGameHud.getChatHud().addMessage(Text.of(String.valueOf(entity.getVelocity().horizontalLength())));
-            matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees((float) (-this.maxHullPitch * EasingFunctions.upsideDownParabola(velocityFactor))));
+            matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees((float) (-maxHullPitch * EasingFunctions.upsideDownParabola(velocityFactor))));
+            if (entity.pressingLeft ^ entity.pressingRight) {
+                int rollDirection = entity.pressingLeft ? 1 : -1;
+                entity.roll += rollDirection * rollStrength * (1.5 - velocityDot) * velocityFactor * tickDelta;
+            }
+            entity.roll *= hullRollDecay;
+            DecimalFormat df = new DecimalFormat("#.##");
+            MinecraftClient.getInstance().inGameHud.getChatHud().addMessage(Text.of(
+                    "velocity: " + String.valueOf(df.format(entity.getVelocity().horizontalLength())) +
+                    "   velocity factor: " + String.valueOf(df.format(velocityFactor)) +
+                    "   roll: " + String.valueOf(df.format(entity.roll)) +
+                    "   dot: " + String.valueOf(df.format(velocityDot))));
 
-//            if (entity.pressingLeft ^ entity.pressingRight) {
-//                int rollDirection = entity.pressingLeft ? 1 : -1;
-//                entity.roll += rollDirection * rollStrength * EasingFunctions.upsideDownParabola(velocityFactor) * tickDelta;
-//            }
-//            entity.roll *= hullRollDecay;
-//            if (entity.roll > maxHullRoll) {
-//                entity.roll = maxHullRoll;
-//            }
-            MinecraftClient.getInstance().inGameHud.getChatHud().addMessage(Text.of(String.valueOf(1 - velocityDot)));
-            int rollDirection = entity.pressingLeft ? 1 : entity.pressingRight ? -1 : 0;
-            float roll = (float) (rollDirection * EasingFunctions.easeOutElastic(1 - velocityDot) * rollStrength * EasingFunctions.upsideDownParabola(velocityFactor));
-            matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(Math.min(roll, maxHullRoll)));
+            matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(MathHelper.clamp(entity.roll, -maxHullRoll, maxHullRoll)));
 
             matrices.translate(0, planingHeight * EasingFunctions.easeOutBack(velocityFactor), 0);
         }
