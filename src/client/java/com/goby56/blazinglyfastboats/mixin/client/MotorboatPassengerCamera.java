@@ -2,7 +2,7 @@ package com.goby56.blazinglyfastboats.mixin.client;
 
 import com.goby56.blazinglyfastboats.entity.custom.MotorboatEntity;
 import com.goby56.blazinglyfastboats.render.MotorboatEntityRenderer;
-import com.goby56.blazinglyfastboats.utils.EasingFunctions;
+import com.goby56.blazinglyfastboats.utils.EasingFunction;
 import net.minecraft.client.render.Camera;
 import net.minecraft.entity.Entity;
 import org.spongepowered.asm.mixin.Mixin;
@@ -21,8 +21,9 @@ public class MotorboatPassengerCamera {
     private void translateEyeHeight(CallbackInfo ci) {
         if (this.focusedEntity != null && this.focusedEntity.hasVehicle()) {
            if (this.focusedEntity.getVehicle() instanceof MotorboatEntity motorboat) {
-               double velocityFactor = motorboat.getVelocity().horizontalLength() / MotorboatEntity.MAX_FORWARD_SPEED;
-               this.cameraY += MotorboatEntityRenderer.planingHeight * EasingFunctions.easeOutBack(velocityFactor) / 2;
+               double velocityFactor = motorboat.getVelocityFactor();
+               System.out.println(velocityFactor);
+               this.cameraY += MotorboatEntityRenderer.planingHeight * EasingFunction.easeOutBack(velocityFactor) / 2;
                // Implement camera tilt (roll) if camera tilt on turn is true in config
            }
         }

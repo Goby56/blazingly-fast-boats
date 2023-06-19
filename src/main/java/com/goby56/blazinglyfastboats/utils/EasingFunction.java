@@ -1,6 +1,24 @@
 package com.goby56.blazinglyfastboats.utils;
 
-public class EasingFunctions {
+public class EasingFunction {
+    public float l;
+    public float u;
+    public float t;
+
+    public EasingFunction(int tickDuration, float fromVelocity, float toVelocity) {
+        this.l = fromVelocity;
+        this.u = toVelocity;
+        this.t = tickDuration;
+    }
+
+    public double compute(int x) {
+        return (l - u) / (t * t) * x * x + 2 * (u - l) / t * x + l;
+    }
+
+    public int inverse(double y) {
+        return (int) (t - t * Math.sqrt(1 + (y - l) / (l - u)));
+    }
+
     public static double easeOutBack(double x) {
         // https://easings.net/#easeOutBack
 

@@ -2,7 +2,7 @@ package com.goby56.blazinglyfastboats.mixin.client;
 
 import com.goby56.blazinglyfastboats.entity.custom.MotorboatEntity;
 import com.goby56.blazinglyfastboats.render.MotorboatEntityRenderer;
-import com.goby56.blazinglyfastboats.utils.EasingFunctions;
+import com.goby56.blazinglyfastboats.utils.EasingFunction;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.LivingEntityRenderer;
 import net.minecraft.client.util.math.MatrixStack;
@@ -22,15 +22,15 @@ public class MotorboatPassengerRenderer {
 	private void renderPassenger(LivingEntity livingEntity, float yaw, float tickDelta, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, CallbackInfo ci) {
 		if (livingEntity.hasVehicle()) {
 			if (livingEntity.getVehicle() instanceof MotorboatEntity motorboat) {
-				double velocityFactor = motorboat.getVelocity().horizontalLength() / MotorboatEntity.MAX_FORWARD_SPEED;
-				double pitch = MotorboatEntityRenderer.maxHullPitch * EasingFunctions.upsideDownParabola(velocityFactor);
+				double velocityFactor = motorboat.getVelocityFactor();
+				double pitch = MotorboatEntityRenderer.maxHullPitch * EasingFunction.upsideDownParabola(velocityFactor);
 
 				RotationAxis rollAxis = RotationAxis.of(Vec3d.fromPolar((float) pitch, motorboat.getYaw()).toVector3f());
 				RotationAxis pitchAxis = RotationAxis.of(Vec3d.fromPolar((float) pitch, motorboat.getYaw() + 90f).toVector3f());
 
 				matrixStack.multiply(rollAxis.rotationDegrees(-motorboat.roll));
-				matrixStack.multiply(pitchAxis.rotationDegrees((float) (MotorboatEntityRenderer.maxHullPitch * EasingFunctions.upsideDownParabola(velocityFactor))));
-				matrixStack.translate(0, MotorboatEntityRenderer.planingHeight * EasingFunctions.easeOutBack(velocityFactor), 0);
+				matrixStack.multiply(pitchAxis.rotationDegrees((float) (MotorboatEntityRenderer.maxHullPitch * EasingFunction.upsideDownParabola(velocityFactor))));
+				matrixStack.translate(0, MotorboatEntityRenderer.planingHeight * EasingFunction.easeOutBack(velocityFactor), 0);
 			}
 		}
 	}

@@ -5,29 +5,21 @@ import com.goby56.blazinglyfastboats.BlazinglyFastBoatsClient;
 import com.goby56.blazinglyfastboats.entity.custom.MotorboatEntity;
 import com.goby56.blazinglyfastboats.model.MotorboatEntityModel;
 import com.goby56.blazinglyfastboats.render.debug.MotorboatDebugRenderer;
-import com.goby56.blazinglyfastboats.utils.EasingFunctions;
-import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
-import net.minecraft.client.MinecraftClient;
+import com.goby56.blazinglyfastboats.utils.EasingFunction;
 import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.render.*;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.entity.EntityRenderer;
 import net.minecraft.client.render.entity.EntityRendererFactory;
-import net.minecraft.client.render.entity.EntityRenderers;
 import net.minecraft.client.render.entity.model.CompositeEntityModel;
 import net.minecraft.client.render.entity.model.ModelWithWaterPatch;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Pair;
 import net.minecraft.util.math.*;
-import org.joml.Matrix3f;
-import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 
 import java.text.DecimalFormat;
-
-import static net.minecraft.client.render.VertexFormat.DrawMode.DEBUG_LINES;
 
 public class MotorboatEntityRenderer extends EntityRenderer<MotorboatEntity> {
     private final Pair<Identifier, CompositeEntityModel<MotorboatEntity>> textureAndModel;
@@ -54,7 +46,6 @@ public class MotorboatEntityRenderer extends EntityRenderer<MotorboatEntity> {
     @Override
     public void render(MotorboatEntity entity, float yaw, float tickDelta, MatrixStack matrices, VertexConsumerProvider vertexConsumerProvider, int light) {
         MotorboatDebugRenderer.renderVelocityVector(entity, vertexConsumerProvider.getBuffer(RenderLayer.getLines()), matrices);
-//        MotorboatDebugRenderer.renderAccelerationVector(entity, vertexConsumerProvider.getBuffer(RenderLayer.getLines()), matrices);
 
         matrices.push();
         matrices.translate(0.0F, 0.375F, 0.0F);
@@ -63,20 +54,16 @@ public class MotorboatEntityRenderer extends EntityRenderer<MotorboatEntity> {
         double velocityDot = entity.getVelocity().normalize().dotProduct(Vec3d.fromPolar(0, yaw));
         double velocityFactor = entity.getVelocity().horizontalLength() / MotorboatEntity.MAX_FORWARD_SPEED;
         if (velocityFactor > 1e-4 && entity.hasControllingPassenger()) {
-            matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees((float) (-maxHullPitch * EasingFunctions.upsideDownParabola(velocityFactor))));
-            DecimalFormat df = new DecimalFormat("#.##");
-            MinecraftClient.getInstance().inGameHud.getChatHud().addMessage(Text.of(
-                    "velocity: " + String.valueOf(df.format(entity.getVelocity().horizontalLength())) +
-                    "   velocity factor: " + String.valueOf(df.format(velocityFactor)) +
-                    "   roll: " + String.valueOf(df.format(entity.roll)) +
-                    "   dot: " + String.valueOf(df.format(velocityDot))));
+            matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees((float) (-maxHullPitch * EasingFunction.upsideDownParabola(velocityFactor))));
+//            DecimalFormat df = new DecimalFormat("#.##");
+//            MinecraftClient.getInstance().inGameHud.getChatHud().addMessage(Text.of(
+//                    "velocity factor: " + String.valueOf(df.format(velocityFactor)) +
+//                    "   roll: " + String.valueOf(df.format(entity.roll))));
 
             matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(MathHelper.clamp(entity.roll, -maxHullRoll, maxHullRoll)));
 
-            matrices.translate(0, planingHeight * EasingFunctions.easeOutBack(velocityFactor), 0);
+            matrices.translate(0, planingHeight * EasingFunction.easeOutBack(velocityFactor), 0);
         }
-
-        entity.updateLastPlayerInput();
 
         float h = (float)entity.getDamageWobbleTicks() - tickDelta;
         float j = entity.getDamageWobbleStrength() - tickDelta;
