@@ -7,7 +7,6 @@ import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.LivingEntityRenderer;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RotationAxis;
 import net.minecraft.util.math.Vec3d;
 import org.spongepowered.asm.mixin.Mixin;
@@ -22,7 +21,7 @@ public class MotorboatPassengerRenderer {
 	private void renderPassenger(LivingEntity livingEntity, float yaw, float tickDelta, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, CallbackInfo ci) {
 		if (livingEntity.hasVehicle()) {
 			if (livingEntity.getVehicle() instanceof MotorboatEntity motorboat) {
-				double velocityFactor = motorboat.getVelocity().horizontalLength() / MotorboatEntity.MAX_FORWARD_SPEED;
+				double velocityFactor = motorboat.getVelocity().horizontalLength() / MotorboatEntity.MAX_VELOCITY;
 				double pitch = MotorboatEntityRenderer.maxHullPitch * EasingFunctions.upsideDownParabola(velocityFactor);
 
 				RotationAxis rollAxis = RotationAxis.of(Vec3d.fromPolar((float) pitch, motorboat.getYaw()).toVector3f());

@@ -21,7 +21,7 @@ public class MotorboatPassengerCamera {
     private void translateEyeHeight(CallbackInfo ci) {
         if (this.focusedEntity != null && this.focusedEntity.hasVehicle()) {
            if (this.focusedEntity.getVehicle() instanceof MotorboatEntity motorboat) {
-               double velocityFactor = motorboat.getVelocity().horizontalLength() / MotorboatEntity.MAX_FORWARD_SPEED;
+               double velocityFactor = motorboat.getVelocity().horizontalLength() / MotorboatEntity.MAX_VELOCITY;
                this.cameraY += MotorboatEntityRenderer.planingHeight * EasingFunctions.easeOutBack(velocityFactor) / 2;
                // Implement camera tilt (roll) if camera tilt on turn is true in config
            }
