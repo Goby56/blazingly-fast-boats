@@ -2,11 +2,13 @@ package com.goby56.blazinglyfastboats.entity.custom;
 
 import com.goby56.blazinglyfastboats.entity.ModEntities;
 import com.goby56.blazinglyfastboats.item.ModItems;
+import com.mojang.authlib.minecraft.client.MinecraftClient;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.vehicle.BoatEntity;
 import net.minecraft.item.Item;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
@@ -15,10 +17,14 @@ public class MotorboatEntity extends BoatEntity {
     public LastPlayerInput lastPlayerInput = LastPlayerInput.NONE;
 
     public static final float MAX_FORWARD_SPEED = 1.2f;
-    public static final float MAX_BACKING_SPEED = 0.3f;
-    public static final float VELOCITY_DECAY = 0.96f; // 0.9 regular boat
+    public static final float MAX_ROLL_DEGREES = 15f;
+    public static final float MAX_PITCH_DEGREES = 20f;
+    public static final float MAX_PLANING_HEIGHT = 0.25f;
+    public static final float VELOCITY_DECAY = 0.93f; // 0.9 regular boat
 
     public float roll = 0;
+    public float pitch = 0;
+    public float planingHeight = 0;
 
     public MotorboatEntity(EntityType<? extends BoatEntity> entityType, World world) {
         super(entityType, world);
@@ -46,36 +52,39 @@ public class MotorboatEntity extends BoatEntity {
         }
     }
 
-    private double getVelocityDecay() {
-        double dot = this.getVelocity().dotProduct(Vec3d.fromPolar(0, this.getYaw()));
-        float maxVelocity = dot > 0 ? MAX_FORWARD_SPEED : MAX_BACKING_SPEED;
-        double x = this.getVelocity().horizontalLength() / maxVelocity;
-        return x * x - 0.5 * x + 0.5 - (1 - VELOCITY_DECAY);
+
+    private double getVelocityFactor() {
+        return this.getVelocity().horizontalLength() / MAX_FORWARD_SPEED;
     }
 
     private void handleInput() {
-
         if (!this.hasPassengers()) {
             return;
         }
+        double speedIncrement = MAX_FORWARD_SPEED * (1 - VELOCITY_DECAY);
         double acceleration = 0f;
-
+        double turningIncrement = (1 - 0.8 * this.getVelocityFactor());
         if (this.pressingLeft) {
-            this.yawVelocity -= 1f;
-
+            this.yawVelocity -= turningIncrement;
         }
         if (this.pressingRight) {
-            this.yawVelocity += 1f;
+            this.yawVelocity += turningIncrement;
         }
         this.setYaw(this.getYaw() + this.yawVelocity);
+        if (this.pressingLeft ^ this.pressingRight) {
+            int rollDirection = this.pressingLeft ? 1 : -1;
+            this.roll += rollDirection * Math.abs(this.yawVelocity);
+        }
+        this.roll = MathHelper.clamp(this.roll, -MAX_ROLL_DEGREES, MAX_ROLL_DEGREES);
 //        if (this.pressingRight != this.pressingLeft && !this.pressingForward && !this.pressingBack) {
+//
 //        }
-        Vec3d velocity = Vec3d.fromPolar(0, this.getYaw());
+//        Vec3d velocity = Vec3d.fromPolar(0, this.getYaw());
         if (this.pressingForward) {
-            acceleration += MAX_FORWARD_SPEED * (1 - VELOCITY_DECAY);
+            acceleration += speedIncrement;
         }
         if (this.pressingBack) {
-            acceleration -= MAX_BACKING_SPEED * (1 - VELOCITY_DECAY);
+            acceleration -= speedIncrement / 4;
         }
         Vec3d accelerationVec = Vec3d.fromPolar(0, this.getYaw()).multiply(acceleration);
         this.setVelocity(this.getVelocity().add(accelerationVec));
@@ -121,6 +130,7 @@ public class MotorboatEntity extends BoatEntity {
             Vec3d vec3d = this.getVelocity();
             this.setVelocity(vec3d.x * (double)this.velocityDecay, vec3d.y + e, vec3d.z * (double)this.velocityDecay);
             this.yawVelocity *= this.velocityDecay;
+            this.roll *= this.velocityDecay;
             if (f > 0.0) {
                 Vec3d vec3d2 = this.getVelocity();
                 this.setVelocity(vec3d2.x, (vec3d2.y + f * 0.06153846016296973) * 0.75, vec3d2.z);

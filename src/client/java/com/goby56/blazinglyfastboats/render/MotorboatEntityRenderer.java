@@ -35,7 +35,7 @@ public class MotorboatEntityRenderer extends EntityRenderer<MotorboatEntity> {
 
     public static final float planingHeight = 0.25f;
     public static final float maxHullPitch = 20f; // degrees
-    public static final float maxHullRoll = 10f; // degrees
+    public static final float maxHullRoll = 15f; // degrees
     public static final float rollStrength = 20f;
     public static final float hullRollDecay = 0.9f;
 
@@ -64,11 +64,6 @@ public class MotorboatEntityRenderer extends EntityRenderer<MotorboatEntity> {
         double velocityFactor = entity.getVelocity().horizontalLength() / MotorboatEntity.MAX_FORWARD_SPEED;
         if (velocityFactor > 1e-4 && entity.hasControllingPassenger()) {
             matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees((float) (-maxHullPitch * EasingFunctions.upsideDownParabola(velocityFactor))));
-            if (entity.pressingLeft ^ entity.pressingRight) {
-                int rollDirection = entity.pressingLeft ? 1 : -1;
-                entity.roll += rollDirection * rollStrength * (1.5 - velocityDot) * velocityFactor * tickDelta;
-            }
-            entity.roll *= hullRollDecay;
             DecimalFormat df = new DecimalFormat("#.##");
             MinecraftClient.getInstance().inGameHud.getChatHud().addMessage(Text.of(
                     "velocity: " + String.valueOf(df.format(entity.getVelocity().horizontalLength())) +

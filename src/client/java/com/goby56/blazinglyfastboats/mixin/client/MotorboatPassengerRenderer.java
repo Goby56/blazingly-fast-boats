@@ -24,13 +24,11 @@ public class MotorboatPassengerRenderer {
 			if (livingEntity.getVehicle() instanceof MotorboatEntity motorboat) {
 				double velocityFactor = motorboat.getVelocity().horizontalLength() / MotorboatEntity.MAX_FORWARD_SPEED;
 				double pitch = MotorboatEntityRenderer.maxHullPitch * EasingFunctions.upsideDownParabola(velocityFactor);
-				double roll = MathHelper.clamp(motorboat.roll, -MotorboatEntityRenderer.maxHullRoll, MotorboatEntityRenderer.maxHullRoll);
-				// TODO do better clamping, now very jittery
 
 				RotationAxis rollAxis = RotationAxis.of(Vec3d.fromPolar((float) pitch, motorboat.getYaw()).toVector3f());
 				RotationAxis pitchAxis = RotationAxis.of(Vec3d.fromPolar((float) pitch, motorboat.getYaw() + 90f).toVector3f());
 
-				matrixStack.multiply(rollAxis.rotationDegrees((float) -roll));
+				matrixStack.multiply(rollAxis.rotationDegrees(-motorboat.roll));
 				matrixStack.multiply(pitchAxis.rotationDegrees((float) (MotorboatEntityRenderer.maxHullPitch * EasingFunctions.upsideDownParabola(velocityFactor))));
 				matrixStack.translate(0, MotorboatEntityRenderer.planingHeight * EasingFunctions.easeOutBack(velocityFactor), 0);
 			}
