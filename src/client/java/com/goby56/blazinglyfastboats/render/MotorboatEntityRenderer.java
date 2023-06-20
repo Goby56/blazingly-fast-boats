@@ -19,8 +19,6 @@ import net.minecraft.util.Pair;
 import net.minecraft.util.math.*;
 import org.joml.Quaternionf;
 
-import java.text.DecimalFormat;
-
 public class MotorboatEntityRenderer extends EntityRenderer<MotorboatEntity> {
     private final Pair<Identifier, CompositeEntityModel<MotorboatEntity>> textureAndModel;
     protected final EntityRenderDispatcher entityRenderDispatcher;
@@ -52,7 +50,7 @@ public class MotorboatEntityRenderer extends EntityRenderer<MotorboatEntity> {
         matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(90.0F - yaw)); // Was 180.0F before, had to change
 
         double velocityDot = entity.getVelocity().normalize().dotProduct(Vec3d.fromPolar(0, yaw));
-        double velocityFactor = entity.getVelocity().horizontalLength() / MotorboatEntity.MAX_FORWARD_SPEED;
+        double velocityFactor = entity.getVelocity().horizontalLength() / MotorboatEntity.MAX_VELOCITY;
         if (velocityFactor > 1e-4 && entity.hasControllingPassenger()) {
             matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees((float) (-maxHullPitch * EasingFunction.upsideDownParabola(velocityFactor))));
 //            DecimalFormat df = new DecimalFormat("#.##");

@@ -3,7 +3,6 @@ package com.goby56.blazinglyfastboats.entity.custom;
 import com.goby56.blazinglyfastboats.entity.ModEntities;
 import com.goby56.blazinglyfastboats.item.ModItems;
 import com.goby56.blazinglyfastboats.utils.EasingFunction;
-import com.mojang.datafixers.util.Either;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.vehicle.BoatEntity;
 import net.minecraft.item.Item;
@@ -11,17 +10,23 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
+import java.util.ArrayList;
+
 public class MotorboatEntity extends BoatEntity {
-    public static final float MAX_FORWARD_SPEED = 1.2f;
+    public static final float MAX_VELOCITY = 2f;
+    public static final float MAX_REVERSE_VELOCITY = 0.2f;
     public static final float MAX_ROLL_DEGREES = 15f;
     public static final float MAX_PITCH_DEGREES = 20f;
     public static final float MAX_PLANING_HEIGHT = 0.25f;
-    public static final float VELOCITY_DECAY = 0.93f; // 0.9 regular boat
+    public static final float VELOCITY_DECAY = 0.92f; // 0.9 regular boat
+
+    private static final float MINIMUM_VELOCITY = 1e-4f;
 
     public static final float MOTOR_POWER = 2;
 
     public int direction = 0; // -1, 0, 1 : backwards, stationary, forwards
-    public boolean isAccelerating = false;
+    public int action = 0; // -1, 0, 1 : reversing/braking, nothing/drifting, accelerating forwards
+    public boolean isBoosting = false;
 
     public VelocityPhase currentVelocityPhase = VelocityPhase.STATIONARY;
 
@@ -45,7 +50,7 @@ public class MotorboatEntity extends BoatEntity {
         if (this.currentVelocityPhase == VelocityPhase.STATIONARY) {
             return 0;
         }
-        float maxVelocity = Math.max(this.currentVelocityPhase.fromVelocity, this.currentVelocityPhase.toVelocity);
+        double maxVelocity = Math.max(this.currentVelocityPhase.fromVelocity, this.currentVelocityPhase.toVelocity);
         return this.getVelocity().horizontalLength() / maxVelocity;
     }
 
@@ -53,37 +58,52 @@ public class MotorboatEntity extends BoatEntity {
         this.setVelocity(this.getVelocity().add(Vec3d.fromPolar(0, this.getYaw() + yaw).multiply(magnitude)));
     }
 
+    private void setVelocity(double magnitude, float yaw) {
+        this.setVelocity(Vec3d.fromPolar(0, yaw).multiply(magnitude));
+    }
+
     private void handleInput() {
         double velocity = this.getVelocity().horizontalLength();
 
+        double turningAmount = Math.max(0.2, 1 - velocity / MAX_VELOCITY);
         if (this.pressingLeft) {
-            this.yawVelocity -= 1 - this.getVelocityFactor();
+            this.yawVelocity -= turningAmount;
         }
         if (this.pressingRight) {
-            this.yawVelocity += 1 - this.getVelocityFactor();
+            this.yawVelocity += turningAmount;
         }
         this.setYaw(this.getYaw() + this.yawVelocity);
 
-        this.isAccelerating = false;
-        this.direction = 0;
+        this.action = 0;
         if (this.pressingForward) {
-            this.isAccelerating = true;
-            this.direction = 1;
+            this.action += 1;
         }
         if (this.pressingBack) {
-            this.isAccelerating = true;
-            this.direction = -1;
+            this.action -= 1;
         }
+        if (velocity < MINIMUM_VELOCITY) {
+            // TODO TEST LESS THAN AND EQUAL
+            this.direction = this.action;
+        } else {
+            this.direction = (int) Math.signum(this.getVelocity().normalize().dotProduct(Vec3d.fromPolar(0, this.getYaw())));
+        }
+        // TODO IMPLEMENT SO THAT TURNING MAKES IT SO THAT YOU CANT START PLANING
+        System.out.printf("direction: %d, action: %d, ", this.direction, this.action);
 
-        this.currentVelocityPhase.nextVelocity(velocity, false)
-                .ifLeft(newVelocity -> this.applyVelocity(newVelocity, this.getYaw()))
-                .ifRight(phase -> this.currentVelocityPhase = phase );
+        this.currentVelocityPhase = VelocityPhase.getPhase(velocity, this.direction, this.action);
+        double newVelocity = this.currentVelocityPhase.nextVelocity(velocity, false);
 
         if (this.pressingLeft ^ this.pressingRight) {
-            int rollDirection = this.pressingLeft ? 1 : -1;
+//            newVelocity *= 0.9;
+            int rollDirection = this.pressingLeft ^ this.direction == -1 ? 1 : -1;
             this.roll += rollDirection * Math.abs(this.yawVelocity);
         }
         this.roll = MathHelper.clamp(this.roll, -MAX_ROLL_DEGREES, MAX_ROLL_DEGREES);
+
+
+        System.out.printf("new vel: %f, ", newVelocity);
+        this.setVelocity(newVelocity * direction, this.getYaw());
+
     }
 
     @Override
@@ -126,8 +146,8 @@ public class MotorboatEntity extends BoatEntity {
                 this.velocityDecay = 0.1f;
                 // maybe spawn particles of block on top of
             }
-            Vec3d vec3d = this.getVelocity();
-            this.setVelocity(vec3d.x, vec3d.y + e, vec3d.z);
+            Vec3d vel = this.getVelocity();
+            this.setVelocity(vel.x, vel.y + e, vel.z);
             this.yawVelocity *= this.velocityDecay;
             this.roll *= this.velocityDecay;
             if (f > 0.0) {
@@ -143,85 +163,110 @@ public class MotorboatEntity extends BoatEntity {
     }
 
     public enum VelocityPhase {
-        STATIONARY(0, 0, 0, 0, false),
+        STATIONARY(1, 0, MINIMUM_VELOCITY, 0, 0),
 
-        FORWARD_ACCELERATION(60, 0f, 0.5f, 1, true),
-        PLANING_ACCELERATION(80, 0.5f, 2f, 1, true, true),
-        PLANING_DRIFT(40, 2f, 1.25f, 1, false),
-        FORWARD_DRIFT(30, 0.5f, 0f, 1, false),
+        FORWARD_ACCELERATION(60, MINIMUM_VELOCITY, 0.8f, 1, 1),
+        PLANING_ACCELERATION(80, 0.8f, MAX_VELOCITY, 1, 1),
+        PLANING_DRIFT(40, MAX_VELOCITY, 1.4f, 1, 0),
+        FORWARD_DRIFT(30, 1.4f, 0f, 1, 0),
+        FORWARD_BRAKING(20, 0.8f, 0f, 1, -1),
+        PLANING_BRAKING(10, MAX_VELOCITY, 1.2, 1, -1),
 
-        REVERSING_DRIFT(10, 0.1f, 0f, -1, false),
-        REVERSING_ACCELERATION(20, 0f, 0.1f, -1, true, true);
+        REVERSING_ACCELERATION(20, MINIMUM_VELOCITY, MAX_REVERSE_VELOCITY, -1, -1),
+        REVERSING_DRIFT(10, MAX_REVERSE_VELOCITY, 0f, -1, 0),
+        REVERSE_BRAKING(5, MAX_REVERSE_VELOCITY, 0f, -1, 1);
 
         private final int tickDuration;
-        private final float fromVelocity;
-        private final float toVelocity;
+        private final double fromVelocity;
+        private final double toVelocity;
 
         private final int direction;
-        private final boolean isAccelerating;
+        private final int action;
 
         private final boolean isIncremental;
         private final EasingFunction velocityFunction;
 
-        private final boolean isMax;
-
-        public Either<Double, VelocityPhase> nextVelocity(double currentVelocity, boolean isBoosting) {
-            if (!withinBounds(currentVelocity)) {
-                if (currentVelocity > this.toVelocity == this.isIncremental && this.isMax) {
-                    return Either.left((double) this.toVelocity);
-                }
-                return Either.right(getPhase(currentVelocity, this.direction, this.isAccelerating));
+        public double nextVelocity(double currentVelocity, boolean isBoosting) {
+            if ((currentVelocity >= this.toVelocity == this.isIncremental) && (this == PLANING_ACCELERATION || this == REVERSING_ACCELERATION)) {
+                return this.toVelocity;
             }
-            int tickProgress = this.velocityFunction.inverse(currentVelocity);
+            double tickProgress = this.velocityFunction.inverse(currentVelocity);
             tickProgress += isBoosting ? 2 : 1;
-            return Either.left(this.velocityFunction.compute(tickProgress));
+
+            System.out.printf("phase: %s, v: %f, t: %f, ", this, currentVelocity, tickProgress / this.tickDuration);
+
+            if (tickProgress >= this.tickDuration) {
+                // CAN MAYBE REMOVE
+//                if (this == PLANING_ACCELERATION || this == REVERSING_ACCELERATION) {
+//                    System.out.printf("toVelocity: %f, ", this.toVelocity);
+//                    return this.toVelocity;
+//                }
+                if (this == STATIONARY) {
+                    return MINIMUM_VELOCITY * 2;
+                }
+                tickProgress = tickDuration;
+
+                if (this.isIncremental) {
+                    return this.velocityFunction.compute(tickProgress) + MINIMUM_VELOCITY;
+                } else {
+                    return this.velocityFunction.compute(tickProgress) - MINIMUM_VELOCITY;
+                }
+            }
+
+            System.out.printf("new tickProg: %f, ", tickProgress / this.tickDuration);
+            return this.velocityFunction.compute(tickProgress);
         }
 
-        public static VelocityPhase getPhase(double velocity, int direction, boolean isAccelerating) {
+        public static VelocityPhase getPhase(double velocity, int direction, int action) {
+            ArrayList<VelocityPhase> possiblePhases = new ArrayList<>();
             for (VelocityPhase phase : VelocityPhase.values()) {
-                if (phase.withinBounds(velocity) && phase.direction == direction && phase.isAccelerating == isAccelerating) {
-                    return phase;
+                if (phase.direction == direction && phase.action == action) {
+                    possiblePhases.add(phase);
                 }
             }
-            if (direction == 1) {
-                return PLANING_ACCELERATION;
+            if (possiblePhases.size() == 1) {
+                return possiblePhases.get(0);
             }
-            if (direction == -1) {
-                return REVERSING_ACCELERATION;
+            if (possiblePhases.size() > 1) {
+                for (VelocityPhase phase : possiblePhases) {
+                    if (phase.withinBounds(velocity)) {
+                        return phase;
+                    }
+                    if (phase.isMaxPhase(velocity)) {
+                        return phase;
+                    }
+                }
             }
             return STATIONARY;
         }
 
         private boolean withinBounds(double velocity) {
-            return velocity < fromVelocity != this.isIncremental &&
-                    velocity > fromVelocity != this.isIncremental;
+            if ((velocity >= toVelocity == this.isIncremental) && (this == PLANING_ACCELERATION || this == REVERSING_ACCELERATION)) {
+                return true;
+            }
+            if (this.isIncremental) {
+                return (velocity >= fromVelocity) && (velocity < toVelocity);
+            }
+            return (velocity <= fromVelocity) && (velocity > toVelocity);
+//            return (velocity >= fromVelocity == this.isIncremental) &&
+//                    (velocity < toVelocity == this.isIncremental);
         }
 
-        VelocityPhase(int tickDuration, float fromVelocity, float toVelocity, int direction, boolean isAccelerating) {
+        private boolean isMaxPhase(double velocity) {
+            return (velocity >= MAX_VELOCITY && (this.fromVelocity == MAX_VELOCITY || this.toVelocity == MAX_VELOCITY));
+        }
+
+        VelocityPhase(int tickDuration, double fromVelocity, double toVelocity, int direction, int action) {
             this.tickDuration = tickDuration;
             this.fromVelocity = fromVelocity;
             this.toVelocity = toVelocity;
             this.direction = direction;
-            this.isAccelerating = isAccelerating;
-
-            this.isMax = false;
+            this.action = action;
 
             this.isIncremental = toVelocity - fromVelocity > 0;
             this.velocityFunction = new EasingFunction(this.tickDuration, this.fromVelocity, this.toVelocity);
         }
 
-        VelocityPhase(int tickDuration, float fromVelocity, float toVelocity, int direction, boolean isAccelerating, boolean isMax) {
-            this.tickDuration = tickDuration;
-            this.fromVelocity = fromVelocity;
-            this.toVelocity = toVelocity;
-            this.direction = direction;
-            this.isAccelerating = isAccelerating;
-
-            this.isMax = isMax;
-
-            this.isIncremental = toVelocity - fromVelocity > 0;
-            this.velocityFunction = new EasingFunction(this.tickDuration, this.fromVelocity, this.toVelocity);
-        }
     }
 }
 
