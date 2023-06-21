@@ -18,7 +18,6 @@ public class MotorboatEntity extends BoatEntity {
     public static final float MAX_ROLL_DEGREES = 15f;
     public static final float MAX_PITCH_DEGREES = 20f;
     public static final float MAX_PLANING_HEIGHT = 0.25f;
-    public static final float VELOCITY_DECAY = 0.92f; // 0.9 regular boat
 
     private static final float MINIMUM_VELOCITY = 1e-4f;
 
@@ -95,6 +94,9 @@ public class MotorboatEntity extends BoatEntity {
 
         if (this.pressingLeft ^ this.pressingRight) {
 //            newVelocity *= 0.9;
+            // TODO TURNING SHOULD SLOW THE BOAT DOWN
+//            newVelocity -= 0.1 * MAX_VELOCITY * Math.abs(this.yawVelocity) / 10f;
+            System.out.printf("yaw vel: %f, ", yawVelocity);
             int rollDirection = this.pressingLeft ^ this.direction == -1 ? 1 : -1;
             this.roll += rollDirection * Math.abs(this.yawVelocity);
         }
@@ -133,7 +135,7 @@ public class MotorboatEntity extends BoatEntity {
                 // lava should be a little bit slower
                 // TODO make water somewhat slippery
                 f = (this.waterLevel - this.getY()) / (double)this.getHeight();
-                this.velocityDecay = VELOCITY_DECAY;
+                this.velocityDecay = 0.9f;
             } else if (this.location == Location.UNDER_FLOWING_WATER) {
                 e = -7.0E-4;
                 this.velocityDecay = 0.9f;
@@ -147,7 +149,11 @@ public class MotorboatEntity extends BoatEntity {
                 // maybe spawn particles of block on top of
             }
             Vec3d vel = this.getVelocity();
-            this.setVelocity(vel.x, vel.y + e, vel.z);
+            if (!this.hasPassengers()) {
+                this.setVelocity(vel.x * this.velocityDecay, vel.y + e, vel.z * this.velocityDecay);
+            } else {
+                this.setVelocity(vel.x, vel.y + e, vel.z);
+            }
             this.yawVelocity *= this.velocityDecay;
             this.roll *= this.velocityDecay;
             if (f > 0.0) {
@@ -169,8 +175,8 @@ public class MotorboatEntity extends BoatEntity {
         PLANING_ACCELERATION(80, 0.8f, MAX_VELOCITY, 1, 1),
         PLANING_DRIFT(40, MAX_VELOCITY, 1.4f, 1, 0),
         FORWARD_DRIFT(30, 1.4f, 0f, 1, 0),
-        FORWARD_BRAKING(20, 0.8f, 0f, 1, -1),
-        PLANING_BRAKING(10, MAX_VELOCITY, 1.2, 1, -1),
+        FORWARD_BRAKING(20, 1.4f, 0f, 1, -1),
+        PLANING_BRAKING(10, MAX_VELOCITY, 1.4f, 1, -1),
 
         REVERSING_ACCELERATION(20, MINIMUM_VELOCITY, MAX_REVERSE_VELOCITY, -1, -1),
         REVERSING_DRIFT(10, MAX_REVERSE_VELOCITY, 0f, -1, 0),
@@ -193,7 +199,7 @@ public class MotorboatEntity extends BoatEntity {
             double tickProgress = this.velocityFunction.inverse(currentVelocity);
             tickProgress += isBoosting ? 2 : 1;
 
-            System.out.printf("phase: %s, v: %f, t: %f, ", this, currentVelocity, tickProgress / this.tickDuration);
+            System.out.printf("phase: %s, prev tickProg: %f, ", this, tickProgress / this.tickDuration);
 
             if (tickProgress >= this.tickDuration) {
                 // CAN MAYBE REMOVE
